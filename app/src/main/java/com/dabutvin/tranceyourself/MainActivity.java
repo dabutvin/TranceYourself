@@ -2,6 +2,10 @@ package com.dabutvin.tranceyourself;
 
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -22,7 +26,12 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
+    final int rows = 7;
+    final int cols = 5;
+    int currentRow = 0;
     List<FloatingActionButton> on = new ArrayList<>();
+    FloatingActionButton[][] grid = new FloatingActionButton[rows][cols];
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,13 +40,12 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-
         LinearLayout outerSurface = (LinearLayout)findViewById(R.id.surface);
-        for (int i = 0; i< 7; i++){
+        for (int i = 0; i< rows; i++){
             LinearLayout surface = new LinearLayout(this);
             outerSurface.addView(surface);
 
-            for(int j = 0; j < 5; j++) {
+            for(int j = 0; j < cols; j++) {
                 FloatingActionButton button = new FloatingActionButton(this);
 
                 button.setBackgroundTintList(ColorStateList.valueOf(Color.RED));
@@ -50,7 +58,83 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
+                grid[i][j] = button;
                 surface.addView(button);
+            }
+        }
+
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        currentRow++;
+                        if (currentRow >= rows) {
+                            currentRow = 0;
+                        }
+                        highlightCurrentRow();
+                        playSound();
+                    }
+                });
+
+            }
+        }, 0, 1000);
+    }
+
+    void playSound(){
+        int duration = 3; // seconds
+        int sampleRate = 8000;
+        int numSamples = duration * sampleRate;
+        double sample[] = new double[numSamples];
+        double freqOfTone = 440; // hz
+
+        if (on.contains(grid[currentRow][1])) {
+            freqOfTone = 220;
+        }
+
+        final byte generatedSnd[] = new byte[2 * numSamples];
+
+        // fill out the array
+        for (int i = 0; i < 100; ++i) {
+            sample[i] = Math.sin(2 * Math.PI * i / (sampleRate/freqOfTone));
+        }
+
+        // convert to 16 bit pcm sound array
+        // assumes the sample buffer is normalised.
+        int idx = 0;
+        for (final double dVal : sample) {
+            // scale to maximum amplitude
+            final short val = (short) ((dVal * 32767));
+            // in 16 bit wav PCM, first byte is the low order byte
+            generatedSnd[idx++] = (byte) (val & 0x00ff);
+            generatedSnd[idx++] = (byte) ((val & 0xff00) >>> 8);
+
+        }
+        final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
+                sampleRate, AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT, generatedSnd.length,
+                AudioTrack.MODE_STATIC);
+        audioTrack.write(generatedSnd, 0, generatedSnd.length);
+        audioTrack.play();
+    }
+
+    private void highlightCurrentRow() {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (on.contains(grid[i][j])) {
+                    if (i == currentRow) {
+                        grid[i][j].setBackgroundTintList(ColorStateList.valueOf(Color.YELLOW));
+                    } else {
+                        grid[i][j].setBackgroundTintList(ColorStateList.valueOf(Color.GREEN));
+                    }
+                } else {
+                    if (i == currentRow) {
+                        grid[i][j].setBackgroundTintList(ColorStateList.valueOf(Color.GRAY));
+                    } else {
+                        grid[i][j].setBackgroundTintList(ColorStateList.valueOf(Color.RED));
+                    }
+                }
             }
         }
     }
