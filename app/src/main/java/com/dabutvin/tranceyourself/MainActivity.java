@@ -26,6 +26,7 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
+    final int interval = 500; // millsecs
     final int rows = 7;
     final int cols = 5;
     int currentRow = 0;
@@ -79,24 +80,25 @@ public class MainActivity extends AppCompatActivity {
                 });
 
             }
-        }, 0, 1000);
+        }, 0, interval);
     }
 
     void playSound(){
-        int duration = 3; // seconds
         int sampleRate = 8000;
-        int numSamples = duration * sampleRate;
+        int numSamples = (int)Math.round((interval / 1000.0) * sampleRate);
         double sample[] = new double[numSamples];
-        double freqOfTone = 440; // hz
+        double freqOfTone = 0; // hz
 
-        if (on.contains(grid[currentRow][1])) {
-            freqOfTone = 220;
+        for(int i = 0; i < cols; i++) {
+            if(on.contains(grid[currentRow][i])) {
+                freqOfTone = 293.66 * Math.pow(Math.pow(2, 1.0/12.0), (2 + i) * 2);
+            }
         }
 
         final byte generatedSnd[] = new byte[2 * numSamples];
 
         // fill out the array
-        for (int i = 0; i < 100; ++i) {
+        for (int i = 0; i < numSamples; ++i) {
             sample[i] = Math.sin(2 * Math.PI * i / (sampleRate/freqOfTone));
         }
 
